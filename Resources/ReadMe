@@ -1,0 +1,14 @@
+IN-SMS Tool Revamp V1
+---------------------
+
+1- The tool is handling now the old traffic that used to be sent to the old IN-SMS Tool.
+	a- The tool gets a CDR in a file starting with INAI
+		- 1124834426,139,139,20160406065519,3.000000,11069.11070.18005.18296.18498.18658.18667.18668.18670.18683.18758,11069.11070.18005.18296.18498.18658.18667.18668.18670.18683.18758,,,0.000000,0,0.000000,0,10.000000,1,10.000000,1,,,,,,,;
+	b- based on the field 2,3,16 it produces the corresponding SMS.
+		
+
+2- The tool is handling now the traffic for Hanoi Project.
+	a- The tool gets a CDR in a file starting with HANOI
+		-1100926701,20160406121212,11184,HANOI
+		
+	b- Baed on the 3 field it produces the corresponding SMS.
