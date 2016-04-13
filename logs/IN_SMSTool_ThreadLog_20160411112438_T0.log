@@ -1,0 +1,4 @@
+2016-04-11 11:24:38 DEBUG :103 - Log appended : logs/IN_SMSTool_ThreadLog_20160411112438_T0
+2016-04-11 11:24:38 DEBUG :349 - File HANOI_1.txt is moved to D:\Arts\IN-SMSToolV1\INPUT\Work\HANOI_1.txt
+2016-04-11 11:24:38 DEBUG :113 - stating to processing File HANOI_1.txt line by line 
+2016-04-11 11:25:25 INFO  :215 - the MSISDN : 1100926700   .. the value for the key: HANOI,11184,

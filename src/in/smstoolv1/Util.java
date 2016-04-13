@@ -252,12 +252,12 @@ public class Util {
     }
 
     public static void setGlobals(){
-//        Globals.WATCHED_DIRECTORY=DIRECTORY_PATH+"INPUT\\Ready\\";
-//        Globals.WORK_DIRECTORY=DIRECTORY_PATH+"INPUT\\Work\\";
-//        Globals.SMS_PREPARATION_DIRECTORY=DIRECTORY_PATH+"SMSPreparation\\";    
-//        Globals.INSTANT_LOG_PATH= DIRECTORY_PATH+"logs\\";   
-//        Globals.ARCHIVE_LOG_DIRECTORY = DIRECTORY_PATH+"ArchiveLog\\";
-//        Globals.ARCHIVE_DIRECTORY = DIRECTORY_PATH+"Archive\\";
+//        Globals.WATCHED_DIRECTORY=Globals.DIRECTORY_PATH+"INPUT\\Ready\\";
+//        Globals.WORK_DIRECTORY=Globals.DIRECTORY_PATH+"INPUT\\Work\\";
+//        Globals.SMS_PREPARATION_DIRECTORY=Globals.DIRECTORY_PATH+"SMSPreparation\\";    
+//        Globals.INSTANT_LOG_PATH= Globals.DIRECTORY_PATH+"logs\\";   
+//        Globals.ARCHIVE_LOG_DIRECTORY = Globals.DIRECTORY_PATH+"ArchiveLog\\";
+//        Globals.ARCHIVE_DIRECTORY = Globals.DIRECTORY_PATH+"Archive\\";
         
         Globals.WATCHED_DIRECTORY=Globals.DIRECTORY_PATH+"INPUT/Ready/";
         Globals.WORK_DIRECTORY=Globals.DIRECTORY_PATH+"INPUT/Work/";
@@ -266,4 +266,6 @@ public class Util {
         Globals.ARCHIVE_LOG_DIRECTORY = Globals.DIRECTORY_PATH+"ArchiveLog/";
         Globals.ARCHIVE_DIRECTORY = Globals.DIRECTORY_PATH+"Archive/";
     }
+
+
 }

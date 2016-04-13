@@ -6,6 +6,8 @@
 package in.smstoolv1;
 
 
+import com.etisalatmisr.smpp.SMSSender;
+import com.etisalatmisr.smpp.SMSSender.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,6 +25,7 @@ import java.util.Date;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.Callable;
+import java.util.logging.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
@@ -43,13 +46,15 @@ public class SlaveThread implements Runnable {
     String tool="";
     Logger logger;
     String appenderName;
-    public SlaveThread(File newFile,String counter,Properties properties){
+    SMSSender smscSender;
+    public SlaveThread(File newFile,String counter,Properties properties,SMSSender smscSender){
         
         this.counter = counter;
         this.properties = properties;
         intializeLogger();
         String filePath = (moveFile(newFile, Globals.WORK_DIRECTORY));
         currentFile = new File(filePath);
+        this.smscSender=smscSender;;
     }
     
     public void execute(){
@@ -187,7 +192,7 @@ public class SlaveThread implements Runnable {
                String arabSMS = valueString[1];
                String name = valueString[2];
                logger.info("the MSISDN : "+currentCDR.getMsisdn()+"   .. the value for the key: "+ key);
-               sendSMS(currentCDR.getMsisdn()+","+arabSMS+",2\n",lineCounter);
+               sendSMS(properties.getProperty("OldINSMSTraffic_sender"),currentCDR.getMsisdn(),arabSMS,lineCounter);
            }
         }
     }
@@ -211,66 +216,81 @@ public class SlaveThread implements Runnable {
             logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
         }
         else {
-             String sms=msisdn+","+value+",2\n";
+             
              logger.info("the MSISDN : "+msisdn+"   .. the value for the key: "+ key);
-             sendSMS(sms,lineCounter);
+             sendSMS(properties.getProperty("HANOI_sender"),msisdn,value,lineCounter);
          }
         
     }
 
-    public  void sendSMS(String toString,int lineCounter) {
-        Writer writer = null;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
-        String currentFileName ="";
-        File resultFile = null;
-        File newFile  = null;
-        if(Util.getOSType() == Globals.OS_UNIX){
-            currentFileName = Globals.SMS_PREPARATION_DIRECTORY+"Revamp_IN_SMSTool_"+sdf.format(new Date())+"_L"+lineCounter+"_V"+this.counter+".txt";
-            resultFile = new File(currentFileName);
-            newFile = new File(Globals.SMS_DIRECTORY+resultFile.getName());
-                    
-        }
-        else{
-            currentFileName = Globals.SMS_PREPARATION_DIRECTORY+"Revamp_IN_SMSTool_"+sdf.format(new Date())+"_L"+lineCounter+"_V"+this.counter+".txt";
-            resultFile = new File(currentFileName);
-            newFile = new File(Globals.SMS_DIRECTORY+resultFile.getName());
+    public  void sendSMS(String sender,String dial,String toString,int lineCounter) {
+    
+        try{
+            String [] smsSplit = toString.split(",");
+            boolean result = smscSender.sendMessage(sender, "0"+dial, toString,2);
+            logger.debug("Successfully Sent SMS");
+            if(result){
+               logger.debug("Successfully Sent SMS to the dial "+dial ); 
+            } else 
+            {
+                logger.debug("Failed to send SMS to the dial  "+dial); 
+            }
+        }catch(Exception e){
+            logger.error("Failed to send SMS to the dial  "+dial); 
         }
         
-        
-        if(!resultFile.exists())
-            try {
-                resultFile.createNewFile();
-        } catch (IOException ex) {
-           logger.error("Cannot create the SMS file in the SMS Preparation Directory: "+ currentFileName);
-        }
-        try {
-            FileWriter fw = new FileWriter(resultFile,true);
-            //BufferedWriter writer give better performance
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.append(toString);
-            bw.close();
-            // Send the file to the SMS tool
-            //logger.info("Deleting moved file : "+ newFile.delete());
-            try{
-            Files.move(Paths.get(resultFile.getAbsolutePath()), Paths.get(newFile.getAbsolutePath()),StandardCopyOption.REPLACE_EXISTING);
-            logger.info("File "+ newFile.getAbsolutePath()+" is moved to the SMS Directory");
-            }catch(Exception e){
-                logger.error("Failed to move File "+ resultFile.getAbsolutePath()+" to the SMS Directory : " + Globals.SMS_DIRECTORY + " under name : " + newFile.getName());
-                logger.error("Exception : "+ e);
-            }    
-//            if(resultFile.renameTo(newFile)){
-//              logger.info("File "+ newFile.getAbsolutePath()+" is moved to the SMS Directory");
-//            }
-//            else {
-//               logger.error("Failed to move File "+ resultFile.getAbsolutePath()+" to the SMS Directory : " + Globals.SMS_DIRECTORY + " under name : " + newFile.getName());
-//            }
-        } catch (UnsupportedEncodingException ex) {
-            logger.error("Error in writing in file : "+ currentFileName);
-        } catch (FileNotFoundException ex) {
-            logger.error("File not found : "+ currentFileName);
-        } catch (IOException ex) {
-            logger.error("IO Exception: "+ currentFileName);;
-        }
+//        Writer writer = null;
+//        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+//        String currentFileName ="";
+//        File resultFile = null;
+//        File newFile  = null;
+//        if(Util.getOSType() == Globals.OS_UNIX){
+//            currentFileName = Globals.SMS_PREPARATION_DIRECTORY+"Revamp_IN_SMSTool_"+sdf.format(new Date())+"_L"+lineCounter+"_V"+this.counter+".txt";
+//            resultFile = new File(currentFileName);
+//            newFile = new File(Globals.SMS_DIRECTORY+resultFile.getName());
+//                    
+//        }
+//        else{
+//            currentFileName = Globals.SMS_PREPARATION_DIRECTORY+"Revamp_IN_SMSTool_"+sdf.format(new Date())+"_L"+lineCounter+"_V"+this.counter+".txt";
+//            resultFile = new File(currentFileName);
+//            newFile = new File(Globals.SMS_DIRECTORY+resultFile.getName());
+//        }
+//        
+//        
+//        if(!resultFile.exists())
+//            try {
+//                resultFile.createNewFile();
+//        } catch (IOException ex) {
+//           logger.error("Cannot create the SMS file in the SMS Preparation Directory: "+ currentFileName);
+//        }
+//        try {
+//            FileWriter fw = new FileWriter(resultFile,true);
+//            //BufferedWriter writer give better performance
+//            BufferedWriter bw = new BufferedWriter(fw);
+//            bw.append(toString);
+//            bw.close();
+//            // Send the file to the SMS tool
+//            //logger.info("Deleting moved file : "+ newFile.delete());
+//            try{
+//            Files.move(Paths.get(resultFile.getAbsolutePath()), Paths.get(newFile.getAbsolutePath()),StandardCopyOption.REPLACE_EXISTING);
+//            logger.info("File "+ newFile.getAbsolutePath()+" is moved to the SMS Directory");
+//            }catch(Exception e){
+//                logger.error("Failed to move File "+ resultFile.getAbsolutePath()+" to the SMS Directory : " + Globals.SMS_DIRECTORY + " under name : " + newFile.getName());
+//                logger.error("Exception : "+ e);
+//            }    
+////            if(resultFile.renameTo(newFile)){
+////              logger.info("File "+ newFile.getAbsolutePath()+" is moved to the SMS Directory");
+////            }
+////            else {
+////               logger.error("Failed to move File "+ resultFile.getAbsolutePath()+" to the SMS Directory : " + Globals.SMS_DIRECTORY + " under name : " + newFile.getName());
+////            }
+//        } catch (UnsupportedEncodingException ex) {
+//            logger.error("Error in writing in file : "+ currentFileName);
+//        } catch (FileNotFoundException ex) {
+//            logger.error("File not found : "+ currentFileName);
+//        } catch (IOException ex) {
+//            logger.error("IO Exception: "+ currentFileName);;
+//        }
     }
     
     public  StringBuilder archiveFile(File currentFile){
