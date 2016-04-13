@@ -228,11 +228,13 @@ public class SlaveThread implements Runnable {
         try{
             String [] smsSplit = toString.split(",");
             boolean result = smscSender.sendMessage(sender, "0"+dial, toString,2);
-            logger.debug("Successfully Sent SMS");
+            logger.debug("Successfully Sending SMS");
             if(result){
-               logger.debug("Successfully Sent SMS to the dial "+dial ); 
+               logger.debug(toString);
+               logger.debug("Successfully Sent SMS to the dial "+dial); 
             } else 
             {
+                logger.debug(toString);
                 logger.debug("Failed to send SMS to the dial  "+dial); 
             }
         }catch(Exception e){
