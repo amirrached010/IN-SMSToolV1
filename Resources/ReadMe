@@ -11,4 +11,13 @@ IN-SMS Tool Revamp V1
 	a- The tool gets a CDR in a file starting with HANOI
 		-1100926701,20160406121212,11184,HANOI
 		
-	b- Baed on the 3 field it produces the corresponding SMS.
+	b- Baed on the 3rd field it produces the corresponding SMS.
+	
+
+2016-04-14	
+3- The tool is handling now the traffic for Renely.
+	a- The tool gets a CDR in a file starting with RENELY
+		-1100926701,20160406121212,1,RENELY
+		
+	b- Baed on the 3rd field it produces the corresponding SMS.
+	

@@ -131,7 +131,13 @@ public class SlaveThread implements Runnable {
                             linecounter++;
                         }
                         else{
-                            logger.error("Unconfigured product : " + workFile.getName());
+                            if(workFile.getName().startsWith("RENELY")){
+                                processLineRenely(line,linecounter);
+                                linecounter++;
+                            }
+                            else{
+                                logger.error("Unconfigured product : " + workFile.getName());
+                            }
                         }
                     }
                 }catch(Exception ex){
@@ -219,6 +225,40 @@ public class SlaveThread implements Runnable {
              
              logger.info("the MSISDN : "+msisdn+"   .. the value for the key: "+ key);
              sendSMS(properties.getProperty("HANOI_sender"),msisdn,value,lineCounter);
+         }
+        
+    }
+    
+    public  void processLineRenely(String line, int lineCounter) {
+        String [] lineFields = line.split(",");
+        // handle the Hanoi CDR.
+        String msisdn= lineFields[0];
+        String timeStamp= lineFields[1];
+        String TDFValue= lineFields[2];
+        String ProjectName= lineFields[lineFields.length-1];
+        
+        if(!ProjectName.startsWith("RENELY")){
+            logger.error("Not a RENELY CDR : "+ line);
+            return;
+        }            
+        
+        String key = "RENELY,GenericSMS,";
+        int TDFInt = Integer.parseInt(TDFValue);
+        String value = properties.getProperty(key);
+         if(value == null){
+            logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
+        }
+        else {
+             
+             if(TDFInt==0){
+                 logger.debug("TDF Value = 0; No SMS will be sent");
+                 return;
+             }
+             
+             logger.info("the MSISDN : "+msisdn+"   .. the value for the key: "+ key);
+             value = value.replace("Z", TDFInt+"");
+             value = value.replace("X", (TDFInt*5)+"");
+             sendSMS(properties.getProperty("RENELY_sender"),msisdn,value,lineCounter);
          }
         
     }
