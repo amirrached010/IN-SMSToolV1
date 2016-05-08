@@ -231,20 +231,38 @@ public class SlaveThread implements Runnable {
     
     public  void processLineRenely(String line, int lineCounter) {
         String [] lineFields = line.split(",");
-        // handle the Hanoi CDR.
-        String msisdn= lineFields[0];
-        String timeStamp= lineFields[1];
-        String TDFValue= lineFields[2];
-        String ProjectName= lineFields[lineFields.length-1];
+        
+        String msisdn=null;
+        String timeStamp=null;
+        String TDFValue=null;
+        String ProjectName=null;
+        
+        try{
+             msisdn= lineFields[0];
+             timeStamp= lineFields[1];
+             TDFValue= lineFields[2];
+             ProjectName= lineFields[lineFields.length-1];
+        }catch(Exception e){
+            logger.error("Exception in parsing the CDR");
+        }
         
         if(!ProjectName.startsWith("RENELY")){
             logger.error("Not a RENELY CDR : "+ line);
             return;
         }            
         
-        String key = "RENELY,GenericSMS,";
-        int TDFInt = Integer.parseInt(TDFValue);
-        String value = properties.getProperty(key);
+        String key = null;
+        int TDFInt = 0;
+        String value =null;
+        
+        try{
+            key = "RENELY,GenericSMS,";
+            TDFInt = Integer.parseInt(TDFValue)-102;
+            value = properties.getProperty(key);
+        }catch(Exception e){
+            logger.error("Exception in parsing the TDF Value or getting the template from the resource file");
+            logger.error(e);
+        }
          if(value == null){
             logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
         }
@@ -256,8 +274,12 @@ public class SlaveThread implements Runnable {
              }
              
              logger.info("the MSISDN : "+msisdn+"   .. the value for the key: "+ key);
-             value = value.replace("Z", TDFInt+"");
-             value = value.replace("X", (TDFInt*5)+"");
+             try{
+                 value = value.replace("Z", TDFInt+"");
+                 value = value.replace("X", (TDFInt*5)+"");
+             }catch(Exception e){
+                 logger.error("Exception in Replacing the parameters into the templates");
+             }
              sendSMS(properties.getProperty("RENELY_sender"),msisdn,value,lineCounter);
          }
         
