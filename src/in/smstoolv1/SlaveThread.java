@@ -136,7 +136,13 @@ public class SlaveThread implements Runnable {
                                 linecounter++;
                             }
                             else{
-                                logger.error("Unconfigured product : " + workFile.getName());
+                                    if(workFile.getName().startsWith("GRENDIZER")){
+                                    processLineGrendizer(line,linecounter);
+                                    linecounter++;
+                                }
+                                else{
+                                    logger.error("Unconfigured product : " + workFile.getName());
+                                }
                             }
                         }
                     }
@@ -281,6 +287,50 @@ public class SlaveThread implements Runnable {
                  logger.error("Exception in Replacing the parameters into the templates");
              }
              sendSMS(properties.getProperty("RENELY_sender"),msisdn,value,lineCounter);
+         }
+        
+    }
+    
+    public  void processLineGrendizer(String line, int lineCounter) {
+        String [] lineFields = line.split(",");
+        
+        String msisdn=null;
+        String timeStamp=null;
+        String TDFValue=null;
+        String ProjectName=null;
+        
+        try{
+             msisdn= lineFields[0];
+             timeStamp= lineFields[1];
+             TDFValue= lineFields[2];
+             ProjectName= lineFields[lineFields.length-1];
+        }catch(Exception e){
+            logger.error("Exception in parsing the CDR");
+        }
+        
+        if(!ProjectName.startsWith("GRENDIZER")){
+            logger.error("Not a GRENDIZER CDR : "+ line);
+            return;
+        }            
+        
+        String key = null;
+        int TDFInt = 0;
+        String value =null;
+        
+        try{
+            key = "GRENDIZER";
+            TDFInt = Integer.parseInt(TDFValue);
+            logger.debug("TDF Value : " + key+","+TDFInt);
+            value = properties.getProperty(key+","+TDFInt);
+        }catch(Exception e){
+            logger.error("Exception in parsing the TDF Value or getting the template from the resource file");
+            logger.error(e);
+        }
+         if(value == null){
+            logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
+        }
+        else {
+             sendSMS(properties.getProperty("GRENDIZER_sender"),msisdn,value,lineCounter);
          }
         
     }
