@@ -123,8 +123,6 @@ public class Main {
     * Responsible of loading the properties file "config.properties" located under Resources.
     * Throws an exception if the file was not found or the configuration was not successfully
     * loaded.
-    * @param void
-    * @return void
     * 
     */
     public static void initiatePropertiesFile(){
