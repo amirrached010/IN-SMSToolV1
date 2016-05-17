@@ -1,15 +1,13 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package in.smstoolv1;
 
 import java.util.Properties;
 
 /**
  *
- * @author Amir.Rashed
+ * This class makes an object from the CDR used in the old
+ * implementation of the IN-SMS Tool.
+ * It was made because the CDR has no reference to the product related to It. 
 
  */
 public class OldINSMSTrafficCDR {

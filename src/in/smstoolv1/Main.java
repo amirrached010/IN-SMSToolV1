@@ -36,11 +36,15 @@ public class Main {
     static Set<Future<String>> resultsHashSet = new LinkedHashSet<Future<String>>();
     static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     static SMSSender smscSender;
+    /**
+     * This is the start of the execution.
+     * @param args 
+     */
+    
     public static void main(String args[]) {
         
         logger = Logger.getLogger(Main.class);
         Util.intializeLogger(logger);
-        
         initiatePropertiesFile();
         initiateSMSCConfigurations();
         Globals.DIRECTORY_PATH =properties.getProperty("HOME_DIRECTORY");
@@ -91,6 +95,12 @@ public class Main {
         
     }
     
+    /**
+     * Handles the file passed in the parameter
+     * Ignores it if it is a temp file.
+     * Assigns a thread to execute it and runs the thread.
+     * @param toFile 
+     */
     private static void HandleFile(File toFile) {
         File currentFile = toFile;
         try {
@@ -109,6 +119,14 @@ public class Main {
         counter++;
     }
 
+    /**
+    * Responsible of loading the properties file "config.properties" located under Resources.
+    * Throws an exception if the file was not found or the configuration was not successfully
+    * loaded.
+    * @param void
+    * @return void
+    * 
+    */
     public static void initiatePropertiesFile(){
         properties = new Properties();
         try {
@@ -125,6 +143,15 @@ public class Main {
         }
     }
 
+    /**
+    * Responsible of setting the connection with the SMSC and mapping its 
+    * configurations from the smpp.cfg file located in the Resources folder.
+    * Throws an exception if the file was not found or the configuration was not successfully
+    * loaded.
+    * @param void
+    * @return void
+    * 
+    */
     public static void initiateSMSCConfigurations(){
         Properties smsSenderProperties = new Properties();
         FileInputStream fileInput;

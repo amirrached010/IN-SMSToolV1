@@ -1,11 +1,10 @@
-/*
-This is the globals class for the IN-SMS Tool V1.
- */
+
 package in.smstoolv1;
 
 /**
- *
- * @author Amir.Rashed
+ * This is the Globals class for the IN-SMS Tool V1.
+ * It contains all the global variables that need to be set only once and used across all the execution.
+ * 
  */
 public class Globals {
     
@@ -19,7 +18,7 @@ public class Globals {
 //    public static final String ARCHIVE_DIRECTORY = DIRECTORY_PATH+"Archive\\";
     
     
-    public static final String SMS_DIRECTORY="/export/home/etisalatSMS/input/";
+//    public static final String SMS_DIRECTORY="/export/home/etisalatSMS/input/";
 //    public static final String DIRECTORY_PATH="/app/IN-SMSToolV1/";
 //    //public static final String DIRECTORY_PATH="/arc/INPlanning/IN-SMSToolV1/";
 //    public static final String WATCHED_DIRECTORY=DIRECTORY_PATH+"INPUT/Ready/";
@@ -29,6 +28,7 @@ public class Globals {
 //    public static final String ARCHIVE_LOG_DIRECTORY = DIRECTORY_PATH+"ArchiveLog/";
 //    public static final String ARCHIVE_DIRECTORY = DIRECTORY_PATH+"Archive/";
   
+    
     public static  String DIRECTORY_PATH;
     public static  String WATCHED_DIRECTORY;
     public static  String WORK_DIRECTORY;

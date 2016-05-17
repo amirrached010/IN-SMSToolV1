@@ -35,8 +35,9 @@ import org.apache.log4j.Logger;
 
 
 /**
- *
- * @author amir.rashed
+ * This class is the runnable thread called with each file assigned from the main class
+ * based on the criteria implemented in the Handle file method in the main class.
+ * Implements the interface Runnable.
  */
 public class SlaveThread implements Runnable {
     
@@ -47,6 +48,15 @@ public class SlaveThread implements Runnable {
     Logger logger;
     String appenderName;
     SMSSender smscSender;
+    /**
+     * Initialize the passed parameters.
+     * Initialize the logger for the current thread.
+     * Move the input file to the working directory.
+     * @param newFile
+     * @param counter
+     * @param properties
+     * @param smscSender 
+     */
     public SlaveThread(File newFile,String counter,Properties properties,SMSSender smscSender){
         
         this.counter = counter;
@@ -57,10 +67,12 @@ public class SlaveThread implements Runnable {
         this.smscSender=smscSender;;
     }
     
+    /**
+     * Handle the path taken by the file since the start of its execution
+     * till the end.
+     */
     public void execute(){
 
-        //process the file.
-        
         try{
             if(currentFile == null || !currentFile.isFile())
                 throw new Exception();
@@ -79,6 +91,9 @@ public class SlaveThread implements Runnable {
 //        }        
     }
 
+    /**
+     * Frees the appender of the logger by closing it.
+     */
     public void stopThread(){
         logger.debug("Thread Stopped for file : "+ currentFile.getName());
         logger.debug("------------------------------------------------------------------------------------------------");
@@ -86,6 +101,9 @@ public class SlaveThread implements Runnable {
         //LogManager.shutdown();
     }
     
+    /**
+     * Initialize the logger for the current thread.
+     */
     public  void intializeLogger(){
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -108,7 +126,13 @@ public class SlaveThread implements Runnable {
         logger.debug("Log appended : " + fileName);
         
     }
-
+    
+    /**
+     * Processes the working file by process each line one by one.
+     * based on the file name, it distribute the lines to the responsible method to handle them.
+     * Logs an error if the file name does not start with a pre configured name.
+     * @param workFile 
+     */
     public  void processFile(File workFile){
         FileInputStream inputStream = null;
         Scanner sc = null;
@@ -141,7 +165,13 @@ public class SlaveThread implements Runnable {
                                     linecounter++;
                                 }
                                 else{
-                                    logger.error("Unconfigured product : " + workFile.getName());
+                                    if(workFile.getName().startsWith("Kalashnikov")){
+                                        processLineGrendizer(line,linecounter);
+                                        linecounter++;
+                                    }
+                                    else{
+                                        logger.error("Unconfigured product : " + workFile.getName());
+                                    }
                                 }
                             }
                         }
@@ -180,6 +210,15 @@ public class SlaveThread implements Runnable {
         }
     }
 
+    /**
+     * Processes the Old IN SMS Tool Stream.
+     * Parses the CDR that contains 16 fields comma separated.
+     * Gets the corresponding SMS from the config file based on the combination
+     * <field 2>,<field 3>, <field 16>,.
+     * Sends the SMS by calling the method sendSMS.
+     * @param line // the line containing the CDR.
+     * @param lineCounter // the line number in the file.
+     */
     public  void processLineOldINSMSTraffic(String line, int lineCounter) {
         String [] lineFields = line.split(",");
         OldINSMSTrafficCDR currentCDR = new OldINSMSTrafficCDR(lineFields);
@@ -209,6 +248,15 @@ public class SlaveThread implements Runnable {
         }
     }
     
+    /**
+     * Processes the Hanoi Stream.
+     * Parses the CDR that contains 4 fields comma separated.
+     * Gets the corresponding SMS from the config file based on the combination
+     * HANOI,<OfferID>,.
+     * Sends the SMS by calling the method sendSMS.
+     * @param line // the line containing the CDR.
+     * @param lineCounter // the line number in the file.
+     */
     public  void processLineHanoi(String line, int lineCounter) {
         String [] lineFields = line.split(",");
         // handle the Hanoi CDR.
@@ -235,6 +283,17 @@ public class SlaveThread implements Runnable {
         
     }
     
+    /**
+     * Processes the RENELY Stream.
+     * Parses the CDR that contains 4 fields comma separated.
+     * Gets the corresponding SMS from the config file based on the combination
+     * RENELY,GenericSMS,
+     * Replaces the Z in the SMS Script with the value sent in field 3.
+     * Replaces the X in the SMS Script with the 5 times value sent in field 3.
+     * Sends the SMS by calling the method sendSMS.
+     * @param line // the line containing the CDR.
+     * @param lineCounter // the line number in the file.
+     */
     public  void processLineRenely(String line, int lineCounter) {
         String [] lineFields = line.split(",");
         
@@ -291,6 +350,15 @@ public class SlaveThread implements Runnable {
         
     }
     
+    /**
+     * Processes the GRENDIZER Stream.
+     * Parses the CDR that contains 4 fields comma separated.
+     * Gets the corresponding SMS from the config file based on the combination
+     * GRENDIZER,<TDFValue>,
+     * Sends the SMS by calling the method sendSMS.
+     * @param line // the line containing the CDR.
+     * @param lineCounter // the line number in the file.
+     */
     public  void processLineGrendizer(String line, int lineCounter) {
         String [] lineFields = line.split(",");
         
@@ -335,6 +403,81 @@ public class SlaveThread implements Runnable {
         
     }
 
+    /**
+     * Processes the Kalashnikov Stream.
+     * Parses the CDR that contains 4 fields comma separated.
+     * Gets the corresponding SMS from the config file based on the combination
+     * Kalashnikov,<TDFValue>,
+     * Replaces the $3 in the SMS Script with the value sent in field 3.
+     * Replaces the $4 in the SMS Script with the value sent in field 4.
+     * Replaces the $6 in the SMS Script with the value sent in field 6.
+     * Sends the SMS by calling the method sendSMS.
+     * @param line // the line containing the CDR.
+     * @param lineCounter // the line number in the file.
+     */
+    public  void processLineKalashnikov(String line, int lineCounter) {
+        String [] lineFields = line.split(",");
+        
+        String msisdn=null;
+        String timeStamp=null;
+        double field3=0.0;
+        double field4=0.0;
+        double field5=0.0;
+        double field6=0.0;
+        String ProjectName=null;
+        
+        try{
+             msisdn= lineFields[0];
+             timeStamp= lineFields[1];
+             field3=Double.parseDouble(lineFields[2]);
+             field4=Double.parseDouble(lineFields[3]);
+             field5=Double.parseDouble(lineFields[4]);
+             field6=Double.parseDouble(lineFields[5]);
+             ProjectName= lineFields[lineFields.length-1];
+        }catch(Exception e){
+            logger.error("Exception in parsing the CDR");
+        }
+        
+        if(!ProjectName.startsWith("Kalashnikov")){
+            logger.error("Not a Kalashnikov CDR : "+ line);
+            return;
+        }            
+        
+        int TDFValue = 0; 
+        if(field6 != 0.0){
+            TDFValue = 1;
+        }    
+        String value =null;
+
+        try{
+            logger.debug("KALASHNIKOV,"+TDFValue);
+            value = properties.getProperty("KALASHNIKOV,"+TDFValue);
+            value = value.replace("$3", field3+"");
+            value = value.replace("$4", field4+"");
+            value = value.replace("$6", field6+"");
+        }catch(Exception e){
+            logger.error("Exception in parsing the TDF Value or getting the template from the resource file");
+            logger.error(e);
+        }
+         if(value == null){
+            logger.error("the MSISDN : "+msisdn+"   .. the value for the key: KALASHNIKOV,"+TDFValue+" does not exist in config file.");
+        }
+        else {
+             sendSMS(properties.getProperty("KALASHNIKOV_sender"),msisdn,value,lineCounter);
+         }
+        
+        
+        
+    }
+    
+    /**
+     * Sends the SMS directly to the SMSC using the object smscSender and the method sendMessage
+     * in the smpp.jar library.
+     * @param sender //The sender of the SMS.
+     * @param dial  // The dial receiving the SMS.
+     * @param toString // The SMS Script.
+     * @param lineCounter //The line number of the CDR requesting sending the passed SMS.
+     */
     public  void sendSMS(String sender,String dial,String toString,int lineCounter) {
     
         try{
@@ -407,6 +550,11 @@ public class SlaveThread implements Runnable {
 //        }
     }
     
+    /**
+     * Archives the file after processing it in the archive directory.
+     * @param currentFile
+     * @return nothing
+     */
     public  StringBuilder archiveFile(File currentFile){
         File newFile = null;
         StringBuilder resultBuilder = new StringBuilder();
@@ -456,11 +604,21 @@ public class SlaveThread implements Runnable {
         return resultBuilder;
     }
 
+    /**
+     * Overridden method from the Runnable class that starts the execution of the thread.
+     */
     @Override
     public void run()  {
        execute();      
     }
 
+    /**
+     * Moves the passed file to the passed destination.
+     * @param file // the file needed to be moved.
+     * @param destination // the destination path
+     * @return the path to the new file if the move is done successfully or "Failed to move" if the move
+     * failed
+     */
     public String moveFile(File file, String destination){
         File directory = new File(destination);
         if(!directory.isDirectory()){
