@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
@@ -152,8 +153,9 @@ public class SlaveThread implements Runnable {
                         }
                         else{
                             if(workFile.getName().startsWith("RENELY")){
-                                processLineRenely(line,linecounter);
-                                linecounter++;
+                                logger.debug("Renely Stream is not processed");
+                                //processLineRenely(line,linecounter);
+                                //linecounter++;
                             }
                             else{
                                     if(workFile.getName().startsWith("GRENDIZER")){
@@ -161,12 +163,27 @@ public class SlaveThread implements Runnable {
                                     linecounter++;
                                 }
                                 else{
-                                    if(workFile.getName().startsWith("Kalashnikov")){
-                                        processLineGrendizer(line,linecounter);
+                                    if(workFile.getName().startsWith("KALASHNIKOV")){
+                                        processLineKalashnikov(line,linecounter);
                                         linecounter++;
                                     }
                                     else{
-                                        logger.error("Unconfigured product : " + workFile.getName());
+                                        if(workFile.getName().startsWith("HANDSETBUNDLE")){
+                                            // to be implemented
+                                            //processLineHandsetBundle(line,linecounter);
+                                            //linecounter++;
+                                        }
+                                        else{
+                                            if(workFile.getName().startsWith("DynamicaSMS")){
+                                                processLineDynamicaSMS(line,linecounter);
+                                                linecounter++;
+                                            }
+                                            else{
+                                                
+                                                logger.error("Unconfigured product : " + workFile.getName());
+                                                
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -415,30 +432,19 @@ public class SlaveThread implements Runnable {
         String [] lineFields = line.split(",");
         
         String msisdn=null;
-        String timeStamp=null;
         double field3=0.0;
         double field4=0.0;
-        double field5=0.0;
         double field6=0.0;
-        String ProjectName=null;
         
         try{
              msisdn= lineFields[0];
-             timeStamp= lineFields[1];
              field3=Double.parseDouble(lineFields[2]);
              field4=Double.parseDouble(lineFields[3]);
-             field5=Double.parseDouble(lineFields[4]);
              field6=Double.parseDouble(lineFields[5]);
-             ProjectName= lineFields[lineFields.length-1];
         }catch(Exception e){
             logger.error("Exception in parsing the CDR");
         }
-        
-        if(!ProjectName.startsWith("Kalashnikov")){
-            logger.error("Not a Kalashnikov CDR : "+ line);
-            return;
-        }            
-        
+
         int TDFValue = 0; 
         if(field6 != 0.0){
             TDFValue = 1;
@@ -460,8 +466,749 @@ public class SlaveThread implements Runnable {
         }
         else {
              sendSMS(properties.getProperty("KALASHNIKOV_sender"),msisdn,value,lineCounter);
-         }
+        }
         
+        
+        
+    }
+    
+    /**
+     * Processes the Old DynamicSMS Tool Stream.
+     * Parses the CDR that contains 23 fields comma separated.
+     * Gets the corresponding SMS from the config file based on the combination
+     * Kalashnikov,<parameters>,
+     * Replaces the $3 in the SMS Script with the value sent in field 3.
+     * Replaces the $4 in the SMS Script with the value sent in field 4.
+     * Replaces the $6 in the SMS Script with the value sent in field 6.
+     * Sends the SMS by calling the method sendSMS.
+     * @param line // the line containing the CDR.
+     * @param lineCounter // the line number in the file.
+     */
+    public  void processLineDynamicaSMS(String line, int lineCounter) {
+        String [] lineFields = line.split(",");
+        logger.debug("CDR being processed : "+ line);
+        int field17 = 0;
+        int field1 = 0;
+        int lastField = -1;
+        String key="";
+        String Script="";
+        if(lineFields.length < 23){
+            logger.error("Unconfigured CDR for the Dynamic SMS ");
+            return;
+        }
+        try {
+            field17 = Integer.parseInt(lineFields[16]);
+        }catch(NumberFormatException e){
+            logger.error("Wrong format for field 17 : " + lineFields[16]);
+            return;
+        }
+        switch(field17){
+                case 1001:
+                    logger.debug("Product PPID : 1001");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try {
+                        logger.debug("Parameter to be used  : "+ lineFields[4]);
+                        Script = Script.replace("X", 15-(Double.parseDouble(lineFields[4]))+"");
+                    }catch(Exception e){
+                        logger.error("Error in replacing the parameters in the Script");
+                        return;
+                    }
+                    
+                    break;
+                    
+                case 1002:
+                    logger.debug("Product PPID : 1002");
+                    double parameter =0;
+                    key = "DYNAMICSMS,"+lineFields[16]+",";
+                    logger.debug("Field 16 : "+lineFields[15]);
+                    if(lineFields[15].equals("1"))
+                        key +=lineFields[15]+",";
+                    else
+                        if(lineFields[15].equals("0")){
+                            key +=lineFields[15]+","+lineFields[1]+",";
+                            logger.debug("Product Key : "+ key);
+                            try {
+                                double field1Beta = Double.parseDouble(lineFields[1]);
+                                field1 = (int)field1Beta;
+                            }catch(NumberFormatException e){
+                                logger.error("Wrong format for field 2 : " + lineFields[1]);
+                                return;
+                            }
+                            try{
+                                    switch(field1){
+                                    case 165:
+                                        parameter = 5.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 166:
+                                        parameter = 10.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 167:
+                                        parameter = 15.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 168:
+                                        parameter = 20.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 169:
+                                        parameter = 25.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 170:
+                                        parameter = 30.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 171:
+                                        parameter = 40.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 172:
+                                        parameter = 50.0 - Double.parseDouble(lineFields[4]);break;
+                                    case 173:
+                                        parameter = 60.0 - Double.parseDouble(lineFields[4]);break;
+                                    default:
+                                        logger.error("Value not configured for field 2 : "+ field1);
+                                        return;
+                                }
+                            }catch(Exception e){
+                                logger.error("Error in parsing the parameter : "+ lineFields[4]);
+                                logger.error(e);
+                                return;
+                            }
+                            
+                        }
+                        else
+                            {
+                                logger.error("Error in handling Product : "+lineFields[16]);
+                                return;
+                            }
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    Script = Script.replace("X", parameter+"");
+                    break;
+                case 1003:
+                    logger.debug("Product PPID : 1003");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+","+lineFields[1]+",";
+                    logger.debug("Product Key : "+ key);
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try {
+                        field1 = Integer.parseInt(lineFields[1]);
+                    }catch(NumberFormatException e){
+                        logger.error("Wrong format for field 2 : " + lineFields[1]);
+                        return;
+                    }
+                    try{
+                        switch(field1){
+                            case 158:
+                                parameter = 25.0 - Double.parseDouble(lineFields[4]);break;
+                            case 159:
+                                parameter = 40.0 - Double.parseDouble(lineFields[4]);break;
+                            case 160:
+                                parameter = 60.0 - Double.parseDouble(lineFields[4]);break;
+                            case 161:
+                                parameter = 80.0 - Double.parseDouble(lineFields[4]);break;
+                            case 162:
+                                parameter = 100.0 - Double.parseDouble(lineFields[4]);break;
+                            case 163:
+                                parameter = 150.0 - Double.parseDouble(lineFields[4]);break;
+                            default:
+                                logger.error("Value not configured for field 2 : "+ field1);
+                                return;
+                        }
+                    }catch(Exception e){
+                        logger.error("Error in parsing parameter : "+ lineFields[4]);
+                        return;
+                    }
+                    logger.debug("Parameter being used  : "+ parameter);
+                    Script = Script.replace("X", parameter+"");
+                    break;
+                case 1004:
+                    logger.debug("Product PPID : 1004");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field5 = Double.parseDouble(lineFields[4]);
+                        field5 *= 0.5;
+                        logger.debug("Parameter being used : "+lineFields[4]);
+                        Script = Script.replace("X", field5+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                        return;
+                    }
+                    break;
+                case 1005:
+                    logger.debug("Product PPID : 1005");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field8 = Double.parseDouble(lineFields[7]);
+                        field8 *= 0.5;
+                        logger.debug("Parameter being used : "+lineFields[7]);
+                        Script = Script.replace("X", field8+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 8 : " + lineFields[7]);
+                        return;
+                    }
+                    break;
+                case 1006:
+                    logger.debug("Product PPID : 1006");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+                    Date currentDate = null;
+                    
+                    try {
+                        currentDate = sdf.parse(lineFields[8]);
+                        SimpleDateFormat sdf1 = new SimpleDateFormat("dd-MM-yyyy");
+                        logger.debug("Date sent in the CDR : "+ lineFields[8]);
+                        Script = Script.replace("X", sdf1.format(currentDate));
+                    } catch (ParseException ex) {
+                      logger.error("Error in parsing date : "+ lineFields[8]);
+                      return;
+                    }
+                    break;
+                case 1007:
+                    logger.debug("Product PPID : 1007");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    if(lineFields[15].equals("0")){
+                    try{
+                        double field5 = Double.parseDouble(lineFields[4]);
+                        field5 = 10 - field5;
+                        logger.debug("Parameter being used : "+lineFields[4]);
+                        Script = Script.replace("X", field5+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                        return;
+                    }
+                    }else {
+                        if(!lineFields[15].equals("1")){
+                            logger.error("field 16 value is not configured : " + lineFields[15]);
+                            return;
+                        }
+                    }
+                    break;
+                case 1008:
+                    logger.debug("Product PPID : 1008");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    break;
+                case 1009:
+                    logger.debug("Product PPID : 1009");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    if(lineFields[15].equals("0")){
+                    try{
+                        double field5 = Double.parseDouble(lineFields[4]);
+                        field5 = 15 - field5;
+                        logger.debug("Parameter being used : "+lineFields[4]);
+                        Script = Script.replace("X", field5+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                        return;
+                    }
+                    }else {
+                        if(!lineFields[15].equals("1")){
+                            logger.error("field 16 value is not configured : " + lineFields[15]);
+                            return;
+                        }
+                    }
+                    
+                    break;
+                case 1012:
+                    logger.debug("Product PPID : 1012");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field5 = Double.parseDouble(lineFields[4]);
+                        field5 = 25 - field5;
+                        logger.debug("Parameter being used : "+lineFields[4]);
+                        Script = Script.replace("X", field5+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                        return;
+                    }
+                    break;
+                case 1014:
+                    logger.debug("Product PPID : 1014");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+","+lineFields[2]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    break;
+                case 1017:
+                    logger.debug("Product PPID : 1017");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    if(!lineFields[20].equals(lineFields[21]) || lineFields[4].equals(lineFields[13])){
+                        try{
+                            double field5 = Double.parseDouble(lineFields[4]);
+                            field5 = 10 - field5;
+                             logger.debug("Parameter being used : "+lineFields[4]);
+                            Script = Script.replace("X", field5+"");
+                        }catch(Exception e){
+                            logger.error("Error in parsing field 5 : " + lineFields[4]);
+                            return;
+                        }
+                    }else {
+                        logger.error("Field 21 is equal Field 22 and Field 5 is not equal Field 14 : "+ line);
+                        return;
+                    }
+                    break;
+                case 1022:
+                    logger.debug("Product PPID : 1022");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    break;
+                case 1023:
+                    logger.debug("Product PPID : 1023");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field5 = Double.parseDouble(lineFields[4]);
+                        field5 = 15 - field5;
+                        logger.debug("Parameter being used : "+lineFields[4]);
+                        Script = Script.replace("X", field5+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                        return;
+                    }
+                    break;
+                case 1024:
+                    logger.debug("Product PPID : 1024");
+                    logger.debug("Field 21 : " +lineFields[20]+"   Field 22 : "+lineFields[21]);
+                    if(lineFields[20].equals(lineFields[21])){
+                        key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+",";
+                        Script = properties.getProperty(key);
+                        if(Script == null || Script.equals("")){
+                            logger.error("Script not found for the key : "+ key);
+                            return;
+                        }
+                        try{
+                            field1 = Integer.parseInt(lineFields[1]);
+                            switch(field1){
+                                case 211:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 5 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 212:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 10 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 213:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 15 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 214:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 20 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 215:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 5 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 216:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 10 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 217:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 15 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 218:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 20 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 219:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 5 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 220:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 10 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 221:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 15 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+                                case 222:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 20 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                    break;
+
+                            }
+                        }catch(Exception e){
+                            logger.error("Error in parsing field 5 : " + lineFields[4]);
+                            return;
+                        }
+                        break;
+                    } else {
+                        try{
+                            double field21 = Double.parseDouble(lineFields[20]);
+                            double field22 = Double.parseDouble(lineFields[21]);
+                            
+                            if(field21 < field22){
+                               key = "DYNAMICSMS,"+lineFields[16]+",";
+                               Script = properties.getProperty(key);
+                               if(Script == null || Script.equals("")){
+                                    logger.error("Script not found for the key : "+ key);
+                                    return;
+                               } 
+                            }
+                        }catch(Exception e){
+                            logger.error("Error in parsing field 21  : " + lineFields[20] + " or field 22 : "+ lineFields[21]);
+                            return;
+                        }
+                    }
+                case 1025:
+                    logger.debug("Product PPID : 1025");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+","+lineFields[1]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                            field1 = Integer.parseInt(lineFields[1]);
+                            switch(field1){
+                                case 230:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 10 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                case 231:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 15 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                case 232:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 20 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                case 233:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 25 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                                case 234:
+                                    try{
+                                        double field5 = Double.parseDouble(lineFields[4]);
+                                        field5 = 30 - field5;
+                                        Script = Script.replace("X", field5+"");
+                                    }catch(Exception e){
+                                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                                        return;
+                                    }
+                            }
+                    }catch(Exception e){
+                        logger.error("Exception in parsing field 2 : "+ field1);
+                        return;
+                    }
+                    break;
+                case 1026:
+                    logger.debug("Product PPID : 1026");
+                    try{
+                        double field16 = Double.parseDouble(lineFields[15]);
+                        double field14 = Double.parseDouble(lineFields[13]);
+                        logger.debug("field16 : "+lineFields[15]);
+                        logger.debug("field14 : "+lineFields[13]);
+                        if(field16 > field14 && field16 < 10){
+                            lastField = 0;
+                        }
+                        else {
+                            
+                           double field22 = Double.parseDouble(lineFields[21]);
+                           double field21 = Double.parseDouble(lineFields[20]);
+                           logger.debug("field22 : "+lineFields[21]);
+                           logger.debug("field21 : "+lineFields[20]);
+                           if(field22 > field21 ){
+                               lastField = 1;
+                           } 
+                        }                        
+                    }catch(Exception e){
+                        logger.error("Error in parsing fields 16,14,21,22 : ");
+                        return;
+                    }
+                    
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+","+lastField+",";
+                    logger.debug("The Key : "+ key);
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                            double field16 = Double.parseDouble(lineFields[15]);
+                            field16 = 10 - field16;
+                            Script = Script.replace("X", field16+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 16 : " + lineFields[15]);
+                        return;
+                    }
+                    break;
+                case 1027:
+                    logger.debug("Product PPID : 1027");
+                    try{
+                        double field16 = Double.parseDouble(lineFields[15]);
+                        double field14 = Double.parseDouble(lineFields[13]);
+                        if(field16 > field14 && field16 < 5){
+                            lastField = 5;
+                            field16 = 5- field16;
+                        }
+                        else {
+                           if(field16 > field14 && field16 < 10){
+                                lastField = 10;
+                                field16 = 10- field16;
+                            }
+                            else {
+                               if(field16 > field14 && field16 < 15){
+                                    lastField = 15;
+                                    field16 = 15- field16;
+                                }
+                                else {
+                                   if(field16 > field14 && field16 < 20){
+                                        lastField = 20;
+                                        field16 = 20- field16;
+                                    }
+                                    else {
+                                        double field22 = Double.parseDouble(lineFields[21]);
+                                        double field21 = Double.parseDouble(lineFields[20]);
+                                        if(field22 > field21 ){
+                                            lastField = 1;
+                                        } 
+                                    }
+                                }
+                            }
+                        }
+                        
+                    }catch(Exception e){
+                        logger.error("Error in parsing fields 16,14,21,22 : ");
+                        return;
+                    }
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+","+lastField+",";
+                    logger.debug("The Key : "+key);
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field16 = Double.parseDouble(lineFields[15]);
+                        field16 = lastField - field16;
+                        Script = Script.replace("X", field16+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 16 : " + lineFields[15]);
+                        return;
+                    }
+                    break;
+                case 1028:
+                    logger.debug("Product PPID : 1028");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[1]+","+lineFields[15]+",";
+                    logger.debug("The Key : "+key);
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field5 = Double.parseDouble(lineFields[4]);
+                        Script = Script.replace("X", field5+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 5 : " + lineFields[4]);
+                        return;
+                    }
+                    break;
+                case 1030:
+                    logger.debug("Product PPID : 1030");
+                    key = "DYNAMICSMS,"+lineFields[16]+",";
+                    logger.debug("The Key : "+key);
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field8 = Double.parseDouble(lineFields[7]);
+                        field8 *= 10;
+                        Script = Script.replace("X", field8+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 8 : " + lineFields[7]);
+                        return;
+                    }
+                    break;
+                case 1031:
+                    logger.debug("Product PPID : 1031");
+                    key = "DYNAMICSMS,"+lineFields[16]+",";
+                    logger.debug("The Key : "+key);
+                    Script = properties.getProperty(key);                    
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field22 = Double.parseDouble(lineFields[21]);
+                        double field21 = Double.parseDouble(lineFields[20]);
+                        field22 = (field22 - field21)/0.25;
+                        Script = Script.replace("X", field22+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 21  : " + lineFields[21]+ " or field 22 : "+ lineFields[22]);
+                        return;
+                    }
+                    break;
+                case 1032:
+                    logger.debug("Product PPID : 1032");
+                    key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[6]+",";
+                    logger.debug("The Key : "+key);
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    try{
+                        double field22 = Double.parseDouble(lineFields[21]);
+                        double field21 = Double.parseDouble(lineFields[20])/0.25;
+                        
+                        Script = Script.replace("Z", field22+"");
+                        Script = Script.replace("X", field21+"");
+                    }catch(Exception e){
+                        logger.error("Error in parsing field 21  : " + lineFields[21]+ " or field 22 : "+ lineFields[22]);
+                        return;
+                    }
+                    break;
+                    
+            }
+            sendSMS(properties.getProperty("DYNAMICSMS_sender"),lineFields[0],Script,lineCounter);
         
         
     }
