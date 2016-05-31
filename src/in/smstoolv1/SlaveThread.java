@@ -19,7 +19,9 @@ import java.nio.file.StandardCopyOption;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
@@ -180,7 +182,15 @@ public class SlaveThread implements Runnable {
                                             }
                                             else{
                                                 
-                                                logger.error("Unconfigured product : " + workFile.getName());
+                                                if(workFile.getName().startsWith("RBTRAMADANPROMO")){
+                                                    processLineRBTRamadanPromo(line,linecounter);
+                                                    linecounter++;
+                                                }
+                                                else{
+
+                                                    logger.error("Unconfigured product : " + workFile.getName());
+
+                                                }
                                                 
                                             }
                                         }
@@ -293,6 +303,71 @@ public class SlaveThread implements Runnable {
              logger.info("the MSISDN : "+msisdn+"   .. the value for the key: "+ key);
              sendSMS(properties.getProperty("HANOI_sender"),msisdn,value,lineCounter);
          }
+        
+    }
+    
+    /**
+     * Processes the RBTRAMADANPROMO Stream.
+     * Parses the CDR that contains 4 fields comma separated.
+     * Gets the corresponding SMS from the config file based on the combination
+     * RBTRAMADANPROMO_SMS_1,RBTRAMADANPROMO_SMS_2
+     * Update the offer id sent in the CDR with a pre configured expiry date and
+     * Sends the SMS by calling the method sendSMS.
+     * @param line // the line containing the CDR.
+     * @param lineCounter // the line number in the file.
+     */
+    public  void processLineRBTRamadanPromo(String line, int lineCounter) {
+        String [] lineFields = line.split(",");
+        
+        String msisdn=null;
+        String input=null;
+        String ProjectName=null;
+        try{
+             msisdn= lineFields[0];
+             input = lineFields[2]+","+properties.getProperty("RBTRAMADANPROMO_ExpiryDate");
+             ProjectName= lineFields[lineFields.length-1];
+
+        }catch(Exception e){
+            logger.error("Exception in parsing the CDR");
+        }
+        if(ProjectName.equals("RBTRAMADANPROMO")){
+            Air newAir =null;
+            HashMap<String,String> ucip_inputs1= null;
+            try{
+                Random rand = new Random();
+                int  n = rand.nextInt(6) + 1;
+                newAir = new Air(properties.getProperty("AIR_"+n+"_URL"),
+                                     properties.getProperty("AIR_"+n+"_PASSWORD"),
+                                     logger);
+                newAir.setMsisdn(msisdn);
+                newAir.setCurrentRequest(Globals.UCIPRequest.UpdateOfferWithExpiryStatic);
+                ucip_inputs1 = newAir.parseInputs(input);
+                logger.debug("Initialization of Air Request is done");
+            }catch(Exception e){
+                logger.error(e);
+            }
+            try {
+                String request = newAir.formatRequestV1(ucip_inputs1,properties);
+                String response = newAir.sendRequest(newAir.formatRequestV1(ucip_inputs1,properties));
+                logger.debug(response);
+                String responseCode = newAir.parseResponse(response);
+                if(responseCode.equals("0")){
+                    logger.debug("The Request was eexcuted successfully with responseCode : "+responseCode);
+                    sendSMS(properties.getProperty("RBTRAMADANPROMO_Sender"),msisdn,properties.getProperty("RBTRAMADANPROMO_SMS_1"),lineCounter);
+                    sendSMS(properties.getProperty("RBTRAMADANPROMO_Sender"),msisdn,properties.getProperty("RBTRAMADANPROMO_SMS_2"),lineCounter);
+                }
+                else {
+                    logger.error("The request failed to execute with responseCode : "+ responseCode);
+                     logger.error(request);
+                     logger.error(response);
+                }
+            }catch(Exception e){
+                logger.error(e);
+            }
+            
+        }
+        
+        
         
     }
     

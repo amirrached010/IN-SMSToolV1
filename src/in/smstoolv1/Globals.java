@@ -43,4 +43,17 @@ public class Globals {
     public static final boolean OS_UNIX = false;
     
     public static boolean IS_OSWIN;
+    
+    public static enum UCIPRequest {
+        UpdateOffer,
+        AddPam,
+        GetAccountDetails,
+        ResetFiveAccumulator,
+        GetOffers,
+        RunPam,
+        UpdateOfferWithExpiryDynamic,
+        UpdateOfferWithExpiryStatic,
+        DeleteOffer,
+        ChangeSC
+    }
 }   
