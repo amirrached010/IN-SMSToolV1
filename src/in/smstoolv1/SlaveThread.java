@@ -325,7 +325,7 @@ public class SlaveThread implements Runnable {
         try{
              msisdn= lineFields[0];
              input = lineFields[2]+","+properties.getProperty("RBTRAMADANPROMO_ExpiryDate");
-             ProjectName= lineFields[lineFields.length-1];
+             ProjectName= lineFields[lineFields.length-2];
 
         }catch(Exception e){
             logger.error("Exception in parsing the CDR");
@@ -365,6 +365,8 @@ public class SlaveThread implements Runnable {
                 logger.error(e);
             }
             
+        }else {
+            logger.error("Wrong Project Name : "+ ProjectName);
         }
         
         
