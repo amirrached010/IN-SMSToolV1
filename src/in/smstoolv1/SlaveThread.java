@@ -317,6 +317,7 @@ public class SlaveThread implements Runnable {
      * @param lineCounter // the line number in the file.
      */
     public  void processLineRBTRamadanPromo(String line, int lineCounter) {
+        logger.debug("RBT Ramadan Promo CDR : "+line);
         String [] lineFields = line.split(",");
         
         String msisdn=null;
@@ -331,6 +332,7 @@ public class SlaveThread implements Runnable {
             logger.error("Exception in parsing the CDR");
         }
         if(ProjectName.equals("RBTRAMADANPROMO")){
+            logger.debug("Correct Project Name : "+ ProjectName);
             Air newAir =null;
             HashMap<String,String> ucip_inputs1= null;
             try{
@@ -352,7 +354,7 @@ public class SlaveThread implements Runnable {
                 logger.debug(response);
                 String responseCode = newAir.parseResponse(response);
                 if(responseCode.equals("0")){
-                    logger.debug("The Request was eexcuted successfully with responseCode : "+responseCode);
+                    logger.debug("The Request was executed for the dial "+msisdn+" successfully with responseCode : "+responseCode);
                     sendSMS(properties.getProperty("RBTRAMADANPROMO_Sender"),msisdn,properties.getProperty("RBTRAMADANPROMO_SMS_1"),lineCounter);
                     sendSMS(properties.getProperty("RBTRAMADANPROMO_Sender"),msisdn,properties.getProperty("RBTRAMADANPROMO_SMS_2"),lineCounter);
                 }
