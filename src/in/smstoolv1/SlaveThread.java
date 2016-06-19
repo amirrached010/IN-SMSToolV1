@@ -187,8 +187,16 @@ public class SlaveThread implements Runnable {
                                                     linecounter++;
                                                 }
                                                 else{
+                                                        if(workFile.getName().startsWith("MBBRenewal")){
+                                                            processLineMBBRenewal(line,linecounter);
+                                                            linecounter++;
+                                                        }
+                                                        else{
 
-                                                    logger.error("Unconfigured product : " + workFile.getName());
+                                                            logger.error("Unconfigured product : " + workFile.getName());
+
+                                                        }
+                                                   
 
                                                 }
                                                 
@@ -386,36 +394,22 @@ public class SlaveThread implements Runnable {
      * @param line // the line containing the CDR.
      * @param lineCounter // the line number in the file.
      */
-    public  void processLineRenely(String line, int lineCounter) {
+    public  void processLineMBBRenewal(String line, int lineCounter) {
         String [] lineFields = line.split(",");
-        
+        String key = null;
+        String value =null;
         String msisdn=null;
-        String timeStamp=null;
-        String TDFValue=null;
-        String ProjectName=null;
-        
         try{
-             msisdn= lineFields[0];
-             timeStamp= lineFields[1];
-             TDFValue= lineFields[2];
-             ProjectName= lineFields[lineFields.length-1];
+             msisdn= lineFields[1];
+             logger.debug("MBB Renewal for MSISDN : "+ msisdn);
+
         }catch(Exception e){
             logger.error("Exception in parsing the CDR");
         }
-        
-        if(!ProjectName.startsWith("RENELY")){
-            logger.error("Not a RENELY CDR : "+ line);
-            return;
-        }            
-        
-        String key = null;
-        int TDFInt = 0;
-        String value =null;
-        
         try{
-            key = "RENELY,GenericSMS,";
-            TDFInt = Integer.parseInt(TDFValue)-102;
+            key = "MBBRenewal,GenericSMS,";
             value = properties.getProperty(key);
+            
         }catch(Exception e){
             logger.error("Exception in parsing the TDF Value or getting the template from the resource file");
             logger.error(e);
@@ -423,21 +417,10 @@ public class SlaveThread implements Runnable {
          if(value == null){
             logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
         }
+        
         else {
-             
-             if(TDFInt==0){
-                 logger.debug("TDF Value = 0; No SMS will be sent");
-                 return;
-             }
-             
-             logger.info("the MSISDN : "+msisdn+"   .. the value for the key: "+ key);
-             try{
-                 value = value.replace("Z", TDFInt+"");
-                 value = value.replace("X", (TDFInt*5)+"");
-             }catch(Exception e){
-                 logger.error("Exception in Replacing the parameters into the templates");
-             }
-             sendSMS(properties.getProperty("RENELY_sender"),msisdn,value,lineCounter);
+             logger.debug("Sending SMS for MBB Renewal for MSISDN : "+ msisdn); 
+             sendSMS(properties.getProperty("MBBRENEWAL_Sender"),msisdn,value,lineCounter);
          }
         
     }
