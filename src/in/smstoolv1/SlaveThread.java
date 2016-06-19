@@ -395,6 +395,7 @@ public class SlaveThread implements Runnable {
      * @param lineCounter // the line number in the file.
      */
     public  void processLineMBBRenewal(String line, int lineCounter) {
+        logger.debug("CDR being processed : "+ line);
         String [] lineFields = line.split(",");
         String key = null;
         String value =null;
@@ -851,6 +852,31 @@ public class SlaveThread implements Runnable {
                         return;
                     }
                     break;
+                case 1021:
+                    logger.debug("Product PPID : 1021");
+                    key = "DYNAMICSMS,"+lineFields[16]+",";
+                    Script = properties.getProperty(key);
+                    if(Script == null || Script.equals("")){
+                        logger.error("Script not found for the key : "+ key);
+                        return;
+                    }
+                    if(lineFields[1].equals("204")){
+                        try{
+                            double field5 = Double.parseDouble(lineFields[4]);
+                            if(field5 < 15){
+                                logger.debug("field 5 is less than 15 : "+ field5); 
+                                field5 = 15 - field5;
+                                Script = Script.replace("X", field5+"");
+                            }
+                           
+                        }catch(Exception e){
+                            logger.error("Error in parsing field 5 : " + lineFields[4]);
+                            return;
+                        }
+                    } else{
+                        logger.debug("Field 2 is not equal : 204");
+                    }
+                break;
                 case 1022:
                     logger.debug("Product PPID : 1022");
                     key = "DYNAMICSMS,"+lineFields[16]+","+lineFields[15]+",";
