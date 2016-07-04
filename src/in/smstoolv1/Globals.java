@@ -54,6 +54,7 @@ public class Globals {
         UpdateOfferWithExpiryDynamic,
         UpdateOfferWithExpiryStatic,
         DeleteOffer,
-        ChangeSC
+        ChangeSC,
+        GetBalanceAndDate
     }
 }   

@@ -193,7 +193,23 @@ public class SlaveThread implements Runnable {
                                                         }
                                                         else{
 
-                                                            logger.error("Unconfigured product : " + workFile.getName());
+                                                            if(workFile.getName().startsWith("RAM")){
+                                                                processLineRAM(line,linecounter);
+                                                                linecounter++;
+                                                            }
+                                                            else{
+
+                                                                if(workFile.getName().startsWith("CLUBPHASE2SMS")){
+                                                                    processLineCLUBPHASE2SMS(line,linecounter);
+                                                                    linecounter++;
+                                                                }
+                                                                else{
+
+                                                                    logger.error("Unconfigured product : " + workFile.getName());
+
+                                                                }
+
+                                                            }
 
                                                         }
                                                    
@@ -426,6 +442,186 @@ public class SlaveThread implements Runnable {
         
     }
     
+    public  void processLineRAM(String line, int lineCounter) {
+        logger.debug("RAM CDR being processed : "+ line);
+        String [] lineFields = line.split(",");
+        String key = null;
+        String value =null;
+        String msisdn=null;
+        String ppid_after=null;
+        String bonus_flag=null;
+        try{
+             msisdn= lineFields[1];
+             ppid_after=lineFields[3];
+             bonus_flag=lineFields[13];
+             logger.debug("RAM for MSISDN : "+ msisdn);
+
+        }catch(Exception e){
+            logger.error("Exception in parsing the CDR");
+        }
+        if(ppid_after.equals(properties.getProperty("RAM_PRODUCTID"))){
+            try{
+                
+                key = "RAM,"+bonus_flag+",";
+                value = properties.getProperty(key);
+
+            }catch(Exception e){
+                logger.error("Exception in parsing the TDF Value or getting the template from the resource file");
+                logger.error(e);
+            }
+             if(value == null){
+                logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
+            }
+
+            else {
+                 logger.debug("Sending SMS for RAM for MSISDN : "+ msisdn); 
+                 sendSMS(properties.getProperty("MBBRENEWAL_Sender"),msisdn,value,lineCounter);
+             }
+        } else {
+            logger.error("Product ID for msisdn : "+msisdn+" does not belong to RAM");
+        }
+        
+    }
+    
+    public  void processLineCLUBPHASE2SMS(String line, int lineCounter) {
+        logger.debug("Club Phase 2 CDR being processed : "+ line);
+        String [] lineFields = line.split(",");
+        String key = null;
+        String value =null;
+        String msisdn=null;
+        String ppid_after=null;
+        String bonus_flag=null;
+        String offers_before=null;
+        String offers_after=null;
+        String das=null;
+        double transaction_amount = -1;
+        double currentValue = -1;
+        try{
+             msisdn= lineFields[0];
+             ppid_after=lineFields[3];
+             bonus_flag=lineFields[13];
+             offers_before=lineFields[5];
+             offers_after=lineFields[6];
+             transaction_amount = Double.parseDouble(lineFields[4]);
+             logger.debug("Club Phase 2 for MSISDN : "+ msisdn);
+
+        }catch(Exception e){
+            logger.error("Exception in parsing the CDR");
+        }
+        if(ppid_after.equals(properties.getProperty("CLUBPHASE2SMS_PRODUCTID"))){
+            logger.debug("Club Phase 2 Product ID : "+ properties.getProperty("CLUBPHASE2SMS_PRODUCTID"));
+            try{
+                logger.debug("Offers : "+offers_after);
+                if(offers_after.contains(properties.getProperty("CLUBPHASE2_SEGOFFERID"))){
+                    logger.debug("Club Phase 2 Segmented Offer : "+ properties.getProperty("CLUBPHASE2_SEGOFFERID"));
+                    Air newAir =null;
+                    HashMap<String,String> ucip_inputs1= null;
+                    try{
+                        Random rand = new Random();
+                        int  n = rand.nextInt(6) + 1;
+                        newAir = new Air(properties.getProperty("AIR_"+n+"_URL"),
+                                             properties.getProperty("AIR_"+n+"_PASSWORD"),
+                                             logger);
+                        newAir.setMsisdn(msisdn);
+                        newAir.setCurrentRequest(Globals.UCIPRequest.GetBalanceAndDate);
+                        logger.debug("Initialization of Air Request is done");
+                    }catch(Exception e){
+                        logger.error(e);
+                    }
+                    try {
+                        String request = newAir.formatRequestV1(ucip_inputs1,properties);
+                        String response = newAir.sendRequest(newAir.formatRequestV1(ucip_inputs1,properties));
+                        String responseCode = newAir.parseResponse(response);
+                        if(responseCode.equals("0")){
+                            logger.debug("The Request was executed for the dial "+msisdn+" successfully with responseCode : "+responseCode);
+                            currentValue = newAir.parseDAValue(response,Integer.parseInt(properties.getProperty("CLUBPHASE2_DASEG")));
+                            if(currentValue == -1){
+                                logger.debug("Done");
+                                return;
+                            }
+                        }
+                        else {
+                            logger.error("The request failed to execute with responseCode : "+ responseCode);
+                             logger.error(request);
+                             logger.error(response);
+                        }
+                    }catch(Exception e){
+                        logger.error(e);
+                    }
+
+                }
+                else {
+                    if(offers_after.contains(properties.getProperty("CLUBPHASE2_NOROFFERID"))){
+                    logger.debug("Club Phase 2 Normal Offer : "+ properties.getProperty("CLUBPHASE2_NOROFFERID"));
+                    Air newAir =null;
+                    HashMap<String,String> ucip_inputs1= null;
+                    try{
+                        Random rand = new Random();
+                        int  n = rand.nextInt(6) + 1;
+                        newAir = new Air(properties.getProperty("AIR_"+n+"_URL"),
+                                             properties.getProperty("AIR_"+n+"_PASSWORD"),
+                                             logger);
+                        newAir.setMsisdn(msisdn);
+                        newAir.setCurrentRequest(Globals.UCIPRequest.GetBalanceAndDate);
+                        logger.debug("Initialization of Air Request is done");
+                    }catch(Exception e){
+                        logger.error(e);
+                    }
+                    try {
+                        String request = newAir.formatRequestV1(ucip_inputs1,properties);
+                        String response = newAir.sendRequest(newAir.formatRequestV1(ucip_inputs1,properties));
+                        logger.debug(response);
+                        String responseCode = newAir.parseResponse(response);
+                        if(responseCode.equals("0")){
+                            logger.debug("The Request was executed for the dial "+msisdn+" successfully with responseCode : "+responseCode);
+                            try {
+                                int ff = Integer.parseInt(properties.getProperty("CLUBPHASE2_DANOR"));
+                                logger.debug("passed parsing DA from config file");
+                                currentValue = newAir.parseDAValue(response,ff);
+                            } catch(Exception e){
+                                logger.debug("Failed to parse DAs");
+                                logger.debug(e);
+                            }
+                            if(currentValue == -1){
+                                logger.debug("Done");
+                                return;
+                            }
+                        }
+                        else {
+                            logger.error("The request failed to execute with responseCode : "+ responseCode);
+                             logger.error(request);
+                             logger.error(response);
+                        }
+                    }catch(Exception e){
+                        logger.error(e);
+                    }
+                    }
+                    else {
+                        return;
+                    }
+                }
+                key = "CLUBPHASE2_GenericSMS";
+                value = properties.getProperty(key);
+                double result = (currentValue/100)-transaction_amount;
+                value = value.replace("X",result+"");
+            }catch(Exception e){
+                logger.error("Exception in parsing the TDF Value or getting the template from the resource file");
+                logger.error(e);
+            }
+            
+            if(value == null){
+                logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
+            }
+
+            else {
+                 logger.debug("Sending SMS for Club Phase 2 for MSISDN : "+ msisdn); 
+                 sendSMS(properties.getProperty("CLUBPHASE2SMS_Sender"),msisdn,value,lineCounter);
+             }
+        } else {
+            logger.error("Product ID for msisdn : "+msisdn+" does not belong to Club Phase 2");
+        }
+        
+    }
     /**
      * Processes the GRENDIZER Stream.
      * Parses the CDR that contains 4 fields comma separated.

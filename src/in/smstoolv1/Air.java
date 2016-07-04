@@ -6,6 +6,7 @@
 package in.smstoolv1;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -21,11 +23,18 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Properties;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -173,6 +182,7 @@ public class Air {
         String updateBalanceAndDateRequest ="";
         try{
             updateBalanceAndDateRequest = readFromFile(new File(System.getProperty("user.dir")+"/Requests/"+currentRequest+".txt")).toString();
+            logger.debug("Request : "+currentRequest+" exists in the Requests folder");
             updateBalanceAndDateRequest = updateBalanceAndDateRequest.replace("$originTimeStamp",sdf.format(new Date()));
             Calendar cal = Calendar.getInstance();
             cal.add(Calendar.MONTH, 6);
@@ -315,4 +325,45 @@ public class Air {
         }
         return status;
     }
+
+    public double parseDAValue(String response, int daID) throws UnsupportedEncodingException, ParserConfigurationException, SAXException, IOException, XPathExpressionException {
+     try {
+        DocumentBuilderFactory factory =DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        StringBuilder xmlStringBuilder = new StringBuilder();
+        xmlStringBuilder.append(response);
+        ByteArrayInputStream input =  new ByteArrayInputStream(xmlStringBuilder.toString().getBytes("UTF-8"));
+        Document doc = builder.parse(input);
+        XPath xPath =  XPathFactory.newInstance().newXPath();
+        String expression = "/methodResponse/params/param/value/struct/member[name='dedicatedAccountInformation']/value/array/data";	        
+        NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(doc, XPathConstants.NODESET);
+        String args = nodeList.item(0).getTextContent();
+        args = args.replace("\n", "");
+        args = args.replace("\t", "");
+        args = args.replace("\r", "");
+        args = args.replace("                                                                                   ","");
+        args = args.replace("dedicatedAccountValue1                                                  ","dedicatedAccountValue1-");
+        args = args.replace("dedicatedAccountID                                                  ","dedicatedAccountID=");
+
+        logger.debug("DA area cutted");
+        
+        while(args.indexOf("dedicatedAccountID") != -1){
+            String ID = args.substring(args.indexOf("dedicatedAccountID")+18,args.indexOf("dedicatedAccountValue1"));
+            int eeee = Integer.parseInt(ID.trim());
+            String value = args.substring(args.indexOf("dedicatedAccountValue1")+22,args.indexOf("expiryDate"));
+            double eeee1 = Double.parseDouble(value.trim());
+            args = args.substring(args.indexOf("yDate")+1);
+            logger.debug("DA ID : "+ eeee +"  DA Value: "+eeee1);
+            if(eeee == daID)
+                return eeee1;
+
+        }
+        
+     }
+     catch(Exception e){
+     logger.error("Exceptinb in parseDA Method");
+     logger.error(e);
+    }
+     return -1;
+   }
 }

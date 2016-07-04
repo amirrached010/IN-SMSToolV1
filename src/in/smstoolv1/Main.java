@@ -77,9 +77,9 @@ public class Main {
                         logger.error("Error in accumulating logs : " + ex);
                     }
                     try{
-                        logger.debug("File being processed : "+ directoryListing[i].getName());
+                        //logger.debug("File being processed : "+ directoryListing[i].getName());
                         HandleFile(directoryListing[i]);
-                        logger.debug("Done Processing file : "+ directoryListing[i].getName());
+                        //logger.debug("Done Processing file : "+ directoryListing[i].getName());
                     } catch(Exception ex){
                         logger.error("Error in Handling file : "+ directoryListing[i].getAbsolutePath());
                     }
@@ -104,7 +104,9 @@ public class Main {
     private static void HandleFile(File toFile) {
         File currentFile = toFile;
         try {
-            if(currentFile.getAbsolutePath().toLowerCase().contains("tmp")){
+            if(currentFile.getAbsolutePath().toLowerCase().contains("tmp") 
+                   // || currentFile.getName().contains("CLUBPHASE2SMS")
+                    ){
                 return;
             }
         }catch(Exception ex){
