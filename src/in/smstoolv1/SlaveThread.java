@@ -183,7 +183,8 @@ public class SlaveThread implements Runnable {
                                             else{
                                                 
                                                 if(workFile.getName().startsWith("RBTRAMADANPROMO")){
-                                                    processLineRBTRamadanPromo(line,linecounter);
+                                                    //Closure of Ramadan RBT Promo 2016
+                                                    //processLineRBTRamadanPromo(line,linecounter);
                                                     linecounter++;
                                                 }
                                                 else{
