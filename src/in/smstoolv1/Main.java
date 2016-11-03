@@ -78,6 +78,9 @@ public class Main {
                     }
                     try{
                         //logger.debug("File being processed : "+ directoryListing[i].getName());
+                        if(smscSender == null){
+                            initiateSMSCConfigurations();
+                        }
                         HandleFile(directoryListing[i]);
                         //logger.debug("Done Processing file : "+ directoryListing[i].getName());
                     } catch(Exception ex){
@@ -105,7 +108,7 @@ public class Main {
         File currentFile = toFile;
         try {
             if(currentFile.getAbsolutePath().toLowerCase().contains("tmp") 
-                   // || currentFile.getName().contains("CLUBPHASE2SMS")
+                    || currentFile.getName().contains("CLUBPHASE2SMS")
                     ){
                 return;
             }

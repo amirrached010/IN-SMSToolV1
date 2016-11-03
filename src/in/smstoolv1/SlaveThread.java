@@ -172,8 +172,8 @@ public class SlaveThread implements Runnable {
                                     else{
                                         if(workFile.getName().startsWith("HANDSETBUNDLE")){
                                             // to be implemented
-                                            //processLineHandsetBundle(line,linecounter);
-                                            //linecounter++;
+                                            processLineHandsetBundle(line,linecounter);
+                                            linecounter++;
                                         }
                                         else{
                                             if(workFile.getName().startsWith("DynamicaSMS")){
@@ -324,9 +324,9 @@ public class SlaveThread implements Runnable {
             logger.error("the MSISDN : "+msisdn+"   .. the value for the key: "+ key +" does not exist in config file.");
         }
         else {
-             
              logger.info("the MSISDN : "+msisdn+"   .. the value for the key: "+ key);
              sendSMS(properties.getProperty("HANOI_sender"),msisdn,value,lineCounter);
+             
          }
         
     }
@@ -1498,6 +1498,40 @@ public class SlaveThread implements Runnable {
         
     }
     
+    public  void processLineHandsetBundle(String line, int lineCounter) {
+        String [] lineFields = line.split(",");
+        String msisdn = null;
+        String timestamp = null;
+        String tdf = null;
+        String projectName = null;
+        try{
+            msisdn = lineFields[0];
+            timestamp = lineFields[1];
+            tdf = lineFields[2];
+            projectName = lineFields[3];
+        }catch(Exception e){
+            logger.error("Error Parsing CDR : "+line);
+            return;
+        }
+        
+        if(projectName.equals("HANDSETBUNDLE")){
+            
+            String sms = null;
+            try{
+                sms = properties.getProperty("HandSetBundle,"+tdf+",");
+                logger.debug("Handset bundle SMS parsed successfully for the dial : "+msisdn+" and the template : "+ "HandSetBundle,"+tdf+",");
+            }
+            catch(Exception e){
+                logger.error("Error in parsing Handset Bundle SMS for the dial : "+msisdn+"and the template : "+"HandSetBundle,"+tdf+",");
+            }
+            sendSMS(properties.getProperty("HandSetBundleSender"),msisdn,sms,lineCounter);
+            
+        }else{
+            logger.error("Error in parsing project name : "+ projectName);
+        }
+        
+    }
+    
     /**
      * Sends the SMS directly to the SMSC using the object smscSender and the method sendMessage
      * in the smpp.jar library.
@@ -1674,6 +1708,5 @@ public class SlaveThread implements Runnable {
             return "Failed to move";
         }
     }
-    
-    
+   
 }
